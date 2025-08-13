@@ -30,6 +30,73 @@ body {
     line-height: 1.6;
 }
 
+/* Tela de Login */
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary-medium));
+    padding: 2rem;
+}
+
+.login-box {
+    background-color: var(--white);
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    padding: 2.5rem;
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+}
+
+.login-box .logo {
+    margin-bottom: 2rem;
+    justify-content: center;
+}
+
+.login-box .logo i {
+    font-size: 2.5rem;
+    color: var(--accent);
+}
+
+.login-box .logo h1 {
+    font-size: 1.8rem;
+}
+
+#login-form .form-group {
+    margin-bottom: 1.5rem;
+    text-align: left;
+}
+
+#login-form label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: var(--primary-medium);
+}
+
+#login-form input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--gray-light);
+    border-radius: 6px;
+    font-size: 1rem;
+}
+
+#login-form input:focus {
+    outline: none;
+    border-color: var(--accent-light);
+    box-shadow: 0 0 0 3px rgba(242, 87, 73, 0.2);
+}
+
+#login-form button {
+    width: 100%;
+    padding: 0.75rem;
+    font-size: 1rem;
+}
+
+/* Aplicação Principal */
 .app-container {
     display: flex;
     flex-direction: column;
@@ -133,6 +200,24 @@ body {
 
 .btn-secondary:hover {
     background-color: var(--gray-medium);
+}
+
+.btn-danger {
+    background-color: var(--danger);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
 }
 
 .filter-bar {
