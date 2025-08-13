@@ -1,12 +1,13 @@
 // Configuração do Firebase (substitua com suas credenciais)
-const firebaseConfig = {
-    apiKey: "SUA_API_KEY",
-    authDomain: "SEU_PROJETO.firebaseapp.com",
-    projectId: "SEU_PROJETO",
-    storageBucket: "SEU_PROJETO.appspot.com",
-    messagingSenderId: "SEU_SENDER_ID",
-    appId: "SEU_APP_ID"
-};
+ const firebaseConfig = {
+    apiKey: "AIzaSyC5eNMJx-yz3YBLdV-vp0eAK_vXDAOZuOQ",
+    authDomain: "miratech-48f84.firebaseapp.com",
+    projectId: "miratech-48f84",
+    storageBucket: "miratech-48f84.firebasestorage.app",
+    messagingSenderId: "510124501557",
+    appId: "1:510124501557:web:1e19e6cdb3cba69b0a5f7c",
+    measurementId: "G-G4LBTK9MTV"
+  };
 
 // Inicializa o Firebase
 firebase.initializeApp(firebaseConfig);
