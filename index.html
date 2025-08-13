@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Almoxarifado - Login</title>
+    <title>Almoxarifado Miratech</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
 </head>
 <body>
     <!-- Tela de Login -->
@@ -35,17 +35,17 @@
         </div>
     </div>
 
-    <!-- Aplicação Principal (inicialmente oculta) -->
+    <!-- Aplicação Principal -->
     <div class="app-container" id="app-container" style="display: none;">
         <header class="app-header">
             <div class="header-content">
                 <div class="logo">
                     <i class="fas fa-boxes"></i>
-                    <h1>Almoxarifado</h1>
+                    <h1>Almoxarifado Miratech</h1>
                 </div>
                 <div class="search-bar">
-                    <input type="text" placeholder="Buscar itens...">
-                    <button><i class="fas fa-search"></i></button>
+                    <input type="text" id="search-input" placeholder="Buscar itens...">
+                    <button id="search-btn"><i class="fas fa-search"></i></button>
                 </div>
                 <button id="add-item" class="btn-primary">
                     <i class="fas fa-plus"></i> Novo Item
@@ -67,9 +67,9 @@
                 </select>
                 <select id="priority-filter">
                     <option value="all">Todas Prioridades</option>
-                    <option value="high">Prioridade Alta</option>
-                    <option value="medium">Prioridade Média</option>
-                    <option value="low">Prioridade Baixa</option>
+                    <option value="high">Alta</option>
+                    <option value="medium">Média</option>
+                    <option value="low">Baixa</option>
                 </select>
                 <button id="reset-filters" class="btn-secondary">
                     <i class="fas fa-redo"></i> Limpar Filtros
