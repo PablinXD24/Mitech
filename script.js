@@ -1,4 +1,4 @@
-// Configuração do Firebase (substitua com suas credenciais)
+// Configuração do Firebase com suas credenciais
 const firebaseConfig = {
   apiKey: "AIzaSyC5eNMJx-yz3YBLdV-vp0eAK_vXDAOZuOQ",
   authDomain: "miratech-48f84.firebaseapp.com",
@@ -13,14 +13,16 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
+const storage = firebase.storage();
 
 // Estado da aplicação
 let currentUser = null;
 let items = [];
 let currentItemId = null;
 let isEditing = false;
-let currentImage = null;
+let currentImageFile = null;
 
+// Inicialização quando o DOM estiver carregado
 document.addEventListener('DOMContentLoaded', function() {
     // Elementos do DOM
     const loginContainer = document.getElementById('login-container');
@@ -28,7 +30,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const loginForm = document.getElementById('login-form');
     const logoutBtn = document.getElementById('logout-btn');
     
-    // Verifica se o usuário já está logado
+    // Verifica estado de autenticação
     auth.onAuthStateChanged(user => {
         if (user) {
             currentUser = user;
@@ -46,7 +48,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Evento de login
     loginForm.addEventListener('submit', function(e) {
         e.preventDefault();
-        const email = document.getElementById('login-email').value + '@miratech.com'; // Adiciona domínio padrão
+        const email = document.getElementById('login-email').value + '@miratech.com';
         const password = document.getElementById('login-password').value;
         
         auth.signInWithEmailAndPassword(email, password)
@@ -60,12 +62,12 @@ document.addEventListener('DOMContentLoaded', function() {
         auth.signOut();
     });
 
-    // Cria usuário padrão (executar apenas uma vez)
+    // Cria usuário padrão se não existir
     createDefaultUser();
 });
 
 function setupApplication() {
-    // Elementos do DOM da aplicação principal
+    // Configura todos os event listeners da aplicação principal
     const newItemBtn = document.getElementById('add-item');
     const closeModalBtn = document.querySelector('.modal-close');
     const cancelBtn = document.getElementById('cancel-btn');
@@ -73,12 +75,12 @@ function setupApplication() {
     const uploadBtn = document.getElementById('upload-btn');
     const removeImageBtn = document.getElementById('remove-image-btn');
     const itemImageInput = document.getElementById('item-image');
-    const searchInput = document.querySelector('.search-bar input');
-    const searchBtn = document.querySelector('.search-bar button');
+    const searchInput = document.getElementById('search-input');
+    const searchBtn = document.getElementById('search-btn');
     const departmentFilter = document.getElementById('department-filter');
     const priorityFilter = document.getElementById('priority-filter');
     const resetFiltersBtn = document.getElementById('reset-filters');
-    
+
     // Event Listeners
     newItemBtn.addEventListener('click', openNewItemModal);
     closeModalBtn.addEventListener('click', closeModal);
@@ -103,7 +105,7 @@ function setupApplication() {
 function createDefaultUser() {
     const email = 'Miratech@miratech.com';
     const password = 'Almo25';
-    
+
     auth.createUserWithEmailAndPassword(email, password)
         .catch((error) => {
             if (error.code !== 'auth/email-already-in-use') {
@@ -120,7 +122,9 @@ function loadItems() {
         .onSnapshot(snapshot => {
             items = [];
             snapshot.forEach(doc => {
-                items.push({ id: doc.id, ...doc.data() });
+                const item = doc.data();
+                item.id = doc.id;
+                items.push(item);
             });
             renderItems();
             updateStats();
@@ -129,39 +133,84 @@ function loadItems() {
         });
 }
 
-function saveItem(itemData) {
-    itemData.userId = currentUser.uid;
-    itemData.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+async function handleFormSubmit(e) {
+    e.preventDefault();
     
-    if (isEditing) {
-        db.collection('items').doc(itemData.id).update(itemData)
-            .catch(error => {
-                console.error('Erro ao atualizar item:', error);
-                alert('Erro ao salvar item');
-            });
-    } else {
-        itemData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-        db.collection('items').add(itemData)
-            .catch(error => {
-                console.error('Erro ao adicionar item:', error);
-                alert('Erro ao salvar item');
-            });
+    // Validação dos campos obrigatórios
+    const itemName = document.getElementById('item-name').value;
+    const itemQuantity = document.getElementById('item-quantity').value;
+    const itemDepartment = document.getElementById('item-department').value;
+    
+    if (!itemName || !itemQuantity || !itemDepartment) {
+        alert("Preencha todos os campos obrigatórios (*)");
+        return;
+    }
+
+    try {
+        let imageUrl = null;
+        
+        // Upload da imagem se existir
+        if (currentImageFile) {
+            const storageRef = storage.ref(`items/${currentUser.uid}/${Date.now()}_${currentImageFile.name}`);
+            const snapshot = await storageRef.put(currentImageFile);
+            imageUrl = await snapshot.ref.getDownloadURL();
+        }
+
+        // Objeto com os dados do item
+        const itemData = {
+            name: itemName,
+            code: document.getElementById('item-code').value || null,
+            category: document.getElementById('item-category').value || null,
+            department: itemDepartment,
+            quantity: parseInt(itemQuantity),
+            unit: document.getElementById('item-unit').value,
+            priority: document.getElementById('item-priority').value,
+            requestDate: document.getElementById('item-request-date').value,
+            dueDate: document.getElementById('item-due-date').value || null,
+            payment: document.getElementById('item-payment').value,
+            supplier: document.getElementById('item-supplier').value || null,
+            notes: document.getElementById('item-notes').value || null,
+            image: imageUrl || null,
+            status: isEditing ? items.find(item => item.id === currentItemId).status : 'requested',
+            userId: currentUser.uid,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        // Adiciona createdAt apenas para novos itens
+        if (!isEditing) {
+            itemData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+        }
+
+        // Salva no Firestore
+        if (isEditing) {
+            await db.collection('items').doc(currentItemId).update(itemData);
+        } else {
+            await db.collection('items').add(itemData);
+        }
+
+        closeModal();
+        resetForm();
+    } catch (error) {
+        console.error('Erro ao salvar item:', error);
+        alert('Erro ao salvar item. Verifique o console.');
     }
 }
 
 function deleteItem(itemId) {
-    db.collection('items').doc(itemId).delete()
-        .catch(error => {
-            console.error('Erro ao deletar item:', error);
-            alert('Erro ao deletar item');
-        });
+    if (confirm('Tem certeza que deseja excluir este item?')) {
+        db.collection('items').doc(itemId).delete()
+            .catch(error => {
+                console.error('Erro ao deletar item:', error);
+                alert('Erro ao deletar item');
+            });
+    }
 }
 
 // Funções de Interface
 function openNewItemModal() {
     isEditing = false;
     currentItemId = null;
-    currentImage = null;
+    currentImageFile = null;
     resetForm();
     document.getElementById('modal-title').textContent = 'Novo Item';
     openModal();
@@ -170,7 +219,7 @@ function openNewItemModal() {
 function openEditItemModal(item) {
     isEditing = true;
     currentItemId = item.id;
-    currentImage = item.image || null;
+    currentImageFile = null;
     populateForm(item);
     document.getElementById('modal-title').textContent = 'Editar Item';
     openModal();
@@ -188,9 +237,9 @@ function closeModal() {
 
 function resetForm() {
     document.getElementById('item-form').reset();
-    currentImage = null;
+    currentImageFile = null;
     updateImagePreview();
-    removeImageBtn.disabled = true;
+    document.getElementById('remove-image-btn').disabled = true;
 }
 
 function populateForm(item) {
@@ -208,35 +257,11 @@ function populateForm(item) {
     document.getElementById('item-notes').value = item.notes || '';
     
     if (item.image) {
-        currentImage = item.image;
+        document.getElementById('image-preview').innerHTML = `<img src="${item.image}" alt="Preview">`;
+        document.getElementById('remove-image-btn').disabled = false;
+    } else {
         updateImagePreview();
-        removeImageBtn.disabled = false;
     }
-}
-
-function handleFormSubmit(e) {
-    e.preventDefault();
-    
-    const itemData = {
-        id: isEditing ? currentItemId : undefined,
-        name: document.getElementById('item-name').value,
-        code: document.getElementById('item-code').value,
-        category: document.getElementById('item-category').value,
-        department: document.getElementById('item-department').value,
-        quantity: parseInt(document.getElementById('item-quantity').value),
-        unit: document.getElementById('item-unit').value,
-        priority: document.getElementById('item-priority').value,
-        requestDate: document.getElementById('item-request-date').value,
-        dueDate: document.getElementById('item-due-date').value || null,
-        payment: document.getElementById('item-payment').value,
-        supplier: document.getElementById('item-supplier').value || null,
-        notes: document.getElementById('item-notes').value || null,
-        image: currentImage,
-        status: isEditing ? items.find(item => item.id === currentItemId).status : 'requested'
-    };
-    
-    saveItem(itemData);
-    closeModal();
 }
 
 // Funções de Imagem
@@ -244,32 +269,28 @@ function handleImageUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
     
+    currentImageFile = file;
+    
     const reader = new FileReader();
     reader.onload = function(event) {
-        currentImage = event.target.result;
-        updateImagePreview();
-        removeImageBtn.disabled = false;
+        document.getElementById('image-preview').innerHTML = `<img src="${event.target.result}" alt="Preview">`;
+        document.getElementById('remove-image-btn').disabled = false;
     };
     reader.readAsDataURL(file);
 }
 
 function removeImage() {
-    currentImage = null;
-    itemImageInput.value = '';
+    currentImageFile = null;
+    document.getElementById('item-image').value = '';
     updateImagePreview();
-    removeImageBtn.disabled = true;
+    document.getElementById('remove-image-btn').disabled = true;
 }
 
 function updateImagePreview() {
-    const imagePreview = document.getElementById('image-preview');
-    if (currentImage) {
-        imagePreview.innerHTML = `<img src="${currentImage}" alt="Preview">`;
-    } else {
-        imagePreview.innerHTML = `
-            <i class="fas fa-box-open"></i>
-            <span>Nenhuma imagem selecionada</span>
-        `;
-    }
+    document.getElementById('image-preview').innerHTML = `
+        <i class="fas fa-box-open"></i>
+        <span>Nenhuma imagem selecionada</span>
+    `;
 }
 
 // Funções de Renderização
@@ -405,25 +426,27 @@ function handleDragLeave() {
     this.classList.remove('drag-over');
 }
 
-function handleDrop(e) {
+async function handleDrop(e) {
     e.preventDefault();
     this.classList.remove('drag-over');
     
     const itemId = e.dataTransfer.getData('text/plain');
     const newStatus = this.parentElement.id.replace('-items', '');
     
-    // Atualiza o status no Firestore
-    db.collection('items').doc(itemId).update({
-        status: newStatus,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }).catch(error => {
+    try {
+        await db.collection('items').doc(itemId).update({
+            status: newStatus,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+    } catch (error) {
         console.error('Erro ao atualizar status:', error);
-    });
+        alert('Erro ao mover item. Verifique o console.');
+    }
 }
 
 // Funções de Filtro
 function filterItems() {
-    const searchTerm = document.querySelector('.search-bar input').value.toLowerCase();
+    const searchTerm = document.getElementById('search-input').value.toLowerCase();
     const department = document.getElementById('department-filter').value;
     const priority = document.getElementById('priority-filter').value;
     
@@ -447,7 +470,7 @@ function filterItems() {
 }
 
 function resetFilters() {
-    document.querySelector('.search-bar input').value = '';
+    document.getElementById('search-input').value = '';
     document.getElementById('department-filter').value = 'all';
     document.getElementById('priority-filter').value = 'all';
     filterItems();
