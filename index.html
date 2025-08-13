@@ -3,12 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Almoxarifado Moderno</title>
+    <title>Almoxarifado - Login</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
-    <div class="app-container">
+    <!-- Tela de Login -->
+    <div class="login-container" id="login-container">
+        <div class="login-box">
+            <div class="logo">
+                <i class="fas fa-boxes"></i>
+                <h1>Almoxarifado</h1>
+            </div>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="login-email">Usuário</label>
+                    <input type="text" id="login-email" placeholder="Digite seu usuário" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Senha</label>
+                    <input type="password" id="login-password" placeholder="Digite sua senha" required>
+                </div>
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-sign-in-alt"></i> Entrar
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Aplicação Principal (inicialmente oculta) -->
+    <div class="app-container" id="app-container" style="display: none;">
         <header class="app-header">
             <div class="header-content">
                 <div class="logo">
@@ -21,6 +49,9 @@
                 </div>
                 <button id="add-item" class="btn-primary">
                     <i class="fas fa-plus"></i> Novo Item
+                </button>
+                <button id="logout-btn" class="btn-danger">
+                    <i class="fas fa-sign-out-alt"></i> Sair
                 </button>
             </div>
         </header>
@@ -52,9 +83,7 @@
                     <h2><i class="fas fa-clipboard-list"></i> Requeridos</h2>
                     <span class="badge" id="requested-count">0</span>
                 </div>
-                <div class="column-body" id="requested-items">
-                    <!-- Itens serão inseridos aqui via JavaScript -->
-                </div>
+                <div class="column-body" id="requested-items"></div>
             </div>
 
             <div class="kanban-column" id="ordered">
@@ -62,9 +91,7 @@
                     <h2><i class="fas fa-truck"></i> Pedidos</h2>
                     <span class="badge" id="ordered-count">0</span>
                 </div>
-                <div class="column-body" id="ordered-items">
-                    <!-- Itens serão inseridos aqui via JavaScript -->
-                </div>
+                <div class="column-body" id="ordered-items"></div>
             </div>
 
             <div class="kanban-column" id="received">
@@ -72,9 +99,7 @@
                     <h2><i class="fas fa-check-circle"></i> Recebidos</h2>
                     <span class="badge" id="received-count">0</span>
                 </div>
-                <div class="column-body" id="received-items">
-                    <!-- Itens serão inseridos aqui via JavaScript -->
-                </div>
+                <div class="column-body" id="received-items"></div>
             </div>
         </main>
 
@@ -96,142 +121,142 @@
                 <div class="stat-label">Atrasados</div>
             </div>
         </div>
-    </div>
 
-    <!-- Modal de Edição -->
-    <div class="modal" id="item-modal">
-        <div class="modal-overlay"></div>
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="modal-title">Novo Item</h2>
-                <button class="modal-close">&times;</button>
+        <!-- Modal de Edição -->
+        <div class="modal" id="item-modal">
+            <div class="modal-overlay"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="modal-title">Novo Item</h2>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <form id="item-form">
+                    <div class="form-section">
+                        <h3><i class="fas fa-info-circle"></i> Informações Básicas</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="item-name">Nome do Item*</label>
+                                <input type="text" id="item-name" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="item-code">Código</label>
+                                <input type="text" id="item-code">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="item-department">Departamento*</label>
+                                <select id="item-department" required>
+                                    <option value="produção">Produção</option>
+                                    <option value="manutenção">Manutenção</option>
+                                    <option value="administrativo">Administrativo</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="item-category">Categoria</label>
+                                <select id="item-category">
+                                    <option value="material">Material</option>
+                                    <option value="ferramenta">Ferramenta</option>
+                                    <option value="equipamento">Equipamento</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3><i class="fas fa-box-open"></i> Quantidade</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="item-quantity">Quantidade*</label>
+                                <input type="number" id="item-quantity" min="1" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="item-unit">Unidade*</label>
+                                <select id="item-unit" required>
+                                    <option value="un">Unidade (UN)</option>
+                                    <option value="kg">Quilograma (KG)</option>
+                                    <option value="m">Metro (M)</option>
+                                    <option value="l">Litro (L)</option>
+                                    <option value="cx">Caixa (CX)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="item-priority">Prioridade*</label>
+                                <select id="item-priority" required>
+                                    <option value="low">Baixa</option>
+                                    <option value="medium">Média</option>
+                                    <option value="high">Alta</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3><i class="fas fa-calendar-alt"></i> Datas</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="item-request-date">Data Solicitação*</label>
+                                <input type="date" id="item-request-date" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="item-due-date">Data Prevista</label>
+                                <input type="date" id="item-due-date">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3><i class="fas fa-money-bill-wave"></i> Pagamento</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="item-payment">Forma de Pagamento*</label>
+                                <select id="item-payment" required>
+                                    <option value="cash">À vista</option>
+                                    <option value="installment">Parcelado</option>
+                                    <option value="consigned">Consignado</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="item-supplier">Fornecedor</label>
+                                <input type="text" id="item-supplier">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3><i class="fas fa-image"></i> Imagem do Item</h3>
+                        <div class="image-upload">
+                            <div class="image-preview" id="image-preview">
+                                <i class="fas fa-box-open"></i>
+                                <span>Nenhuma imagem selecionada</span>
+                            </div>
+                            <div class="upload-actions">
+                                <input type="file" id="item-image" accept="image/*" style="display: none;">
+                                <button type="button" id="upload-btn" class="btn-secondary">
+                                    <i class="fas fa-upload"></i> Selecionar
+                                </button>
+                                <button type="button" id="remove-image-btn" class="btn-secondary" disabled>
+                                    <i class="fas fa-trash"></i> Remover
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3><i class="fas fa-comment-alt"></i> Observações</h3>
+                        <textarea id="item-notes" rows="3" placeholder="Adicione observações sobre o item..."></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" id="cancel-btn" class="btn-secondary">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn-primary">
+                            <i class="fas fa-save"></i> Salvar Item
+                        </button>
+                    </div>
+                </form>
             </div>
-            <form id="item-form">
-                <div class="form-section">
-                    <h3><i class="fas fa-info-circle"></i> Informações Básicas</h3>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="item-name">Nome do Item*</label>
-                            <input type="text" id="item-name" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="item-code">Código</label>
-                            <input type="text" id="item-code">
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="item-department">Departamento*</label>
-                            <select id="item-department" required>
-                                <option value="produção">Produção</option>
-                                <option value="manutenção">Manutenção</option>
-                                <option value="administrativo">Administrativo</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="item-category">Categoria</label>
-                            <select id="item-category">
-                                <option value="material">Material</option>
-                                <option value="ferramenta">Ferramenta</option>
-                                <option value="equipamento">Equipamento</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-section">
-                    <h3><i class="fas fa-box-open"></i> Quantidade</h3>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="item-quantity">Quantidade*</label>
-                            <input type="number" id="item-quantity" min="1" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="item-unit">Unidade*</label>
-                            <select id="item-unit" required>
-                                <option value="un">Unidade (UN)</option>
-                                <option value="kg">Quilograma (KG)</option>
-                                <option value="m">Metro (M)</option>
-                                <option value="l">Litro (L)</option>
-                                <option value="cx">Caixa (CX)</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="item-priority">Prioridade*</label>
-                            <select id="item-priority" required>
-                                <option value="low">Baixa</option>
-                                <option value="medium">Média</option>
-                                <option value="high">Alta</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-section">
-                    <h3><i class="fas fa-calendar-alt"></i> Datas</h3>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="item-request-date">Data Solicitação*</label>
-                            <input type="date" id="item-request-date" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="item-due-date">Data Prevista</label>
-                            <input type="date" id="item-due-date">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-section">
-                    <h3><i class="fas fa-money-bill-wave"></i> Pagamento</h3>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="item-payment">Forma de Pagamento*</label>
-                            <select id="item-payment" required>
-                                <option value="cash">À vista</option>
-                                <option value="installment">Parcelado</option>
-                                <option value="consigned">Consignado</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="item-supplier">Fornecedor</label>
-                            <input type="text" id="item-supplier">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-section">
-                    <h3><i class="fas fa-image"></i> Imagem do Item</h3>
-                    <div class="image-upload">
-                        <div class="image-preview" id="image-preview">
-                            <i class="fas fa-box-open"></i>
-                            <span>Nenhuma imagem selecionada</span>
-                        </div>
-                        <div class="upload-actions">
-                            <input type="file" id="item-image" accept="image/*" style="display: none;">
-                            <button type="button" id="upload-btn" class="btn-secondary">
-                                <i class="fas fa-upload"></i> Selecionar
-                            </button>
-                            <button type="button" id="remove-image-btn" class="btn-secondary" disabled>
-                                <i class="fas fa-trash"></i> Remover
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-section">
-                    <h3><i class="fas fa-comment-alt"></i> Observações</h3>
-                    <textarea id="item-notes" rows="3" placeholder="Adicione observações sobre o item..."></textarea>
-                </div>
-
-                <div class="form-actions">
-                    <button type="button" id="cancel-btn" class="btn-secondary">
-                        Cancelar
-                    </button>
-                    <button type="submit" class="btn-primary">
-                        <i class="fas fa-save"></i> Salvar Item
-                    </button>
-                </div>
-            </form>
         </div>
     </div>
 
