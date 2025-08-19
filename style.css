@@ -736,3 +736,57 @@ body {
         min-width: 100%;
     }
 }
+
+/* ... (mantenha todo o CSS existente) ... */
+
+/* Adicione estas regras ao final do arquivo */
+
+.item-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--gray-light);
+}
+
+.delete-btn {
+    padding: 0.5rem;
+    font-size: 0.8rem;
+    border-radius: 4px;
+}
+
+/* Melhorias para responsividade */
+@media (max-width: 768px) {
+    .item-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    .item-priority {
+        align-self: flex-start;
+    }
+}
+
+/* Melhorias para acessibilidade */
+.btn-primary:focus,
+.btn-secondary:focus,
+.btn-danger:focus,
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: 2px solid var(--accent-light);
+    outline-offset: 2px;
+}
+
+/* Melhorias para o modal em telas pequenas */
+@media (max-width: 480px) {
+    .modal-content {
+        margin: 0.5rem;
+        width: auto;
+    }
+    
+    .modal-body {
+        padding: 1rem;
+    }
+}
