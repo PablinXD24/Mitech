@@ -99,6 +99,9 @@ function setupApplication() {
 
     // Configura drag and drop
     setupDragAndDrop();
+    
+    // Define a data atual como padrão para o campo de data de solicitação
+    document.getElementById('item-request-date').valueAsDate = new Date();
 }
 
 // Funções de Autenticação
@@ -240,6 +243,7 @@ function resetForm() {
     currentImageFile = null;
     updateImagePreview();
     document.getElementById('remove-image-btn').disabled = true;
+    document.getElementById('item-request-date').valueAsDate = new Date();
 }
 
 function populateForm(item) {
@@ -364,6 +368,12 @@ function createItemCard(item) {
         </div>
         
         <div class="item-department">${item.department}</div>
+        
+        <div class="item-actions">
+            <button class="btn-danger delete-btn" onclick="event.stopPropagation(); deleteItem('${item.id}')">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
     `;
     
     card.addEventListener('click', () => openEditItemModal(item));
@@ -431,7 +441,7 @@ async function handleDrop(e) {
     this.classList.remove('drag-over');
     
     const itemId = e.dataTransfer.getData('text/plain');
-    const newStatus = this.parentElement.id.replace('-items', '');
+    const newStatus = this.id.replace('-items', '');
     
     try {
         await db.collection('items').doc(itemId).update({
@@ -452,7 +462,8 @@ function filterItems() {
     
     const filteredItems = items.filter(item => {
         const matchesSearch = item.name.toLowerCase().includes(searchTerm) || 
-                             (item.code && item.code.toLowerCase().includes(searchTerm));
+                             (item.code && item.code.toLowerCase().includes(searchTerm)) ||
+                             (item.supplier && item.supplier.toLowerCase().includes(searchTerm));
         const matchesDepartment = department === 'all' || item.department === department;
         const matchesPriority = priority === 'all' || item.priority === priority;
         
