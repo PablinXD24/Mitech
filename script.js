@@ -119,6 +119,7 @@ function createDefaultUser() {
 
 // Funções de CRUD
 function loadItems() {
+    console.log("Carregando itens para o usuário:", currentUser.uid);
     db.collection('items')
         .where('userId', '==', currentUser.uid)
         .orderBy('createdAt', 'desc')
@@ -128,6 +129,7 @@ function loadItems() {
                 const item = doc.data();
                 item.id = doc.id;
                 items.push(item);
+                console.log("Item carregado:", item.name, "Status:", item.status);
             });
             renderItems();
             updateStats();
@@ -187,8 +189,10 @@ async function handleFormSubmit(e) {
         // Salva no Firestore
         if (isEditing) {
             await db.collection('items').doc(currentItemId).update(itemData);
+            console.log("Item atualizado:", itemData.name);
         } else {
-            await db.collection('items').add(itemData);
+            const docRef = await db.collection('items').add(itemData);
+            console.log("Novo item criado com ID:", docRef.id, "Nome:", itemData.name);
         }
 
         closeModal();
@@ -202,6 +206,9 @@ async function handleFormSubmit(e) {
 function deleteItem(itemId) {
     if (confirm('Tem certeza que deseja excluir este item?')) {
         db.collection('items').doc(itemId).delete()
+            .then(() => {
+                console.log("Item excluído:", itemId);
+            })
             .catch(error => {
                 console.error('Erro ao deletar item:', error);
                 alert('Erro ao deletar item');
@@ -299,11 +306,18 @@ function updateImagePreview() {
 
 // Funções de Renderização
 function renderItems() {
+    console.log("Renderizando", items.length, "itens");
     clearColumns();
     
     items.forEach(item => {
         const card = createItemCard(item);
-        document.getElementById(`${item.status}-items`).appendChild(card);
+        const columnElement = document.getElementById(`${item.status}-items`);
+        if (columnElement) {
+            columnElement.appendChild(card);
+            console.log("Item adicionado à coluna:", item.status, "-", item.name);
+        } else {
+            console.error("Coluna não encontrada:", `${item.status}-items`);
+        }
     });
     
     updateColumnCounts();
@@ -448,6 +462,7 @@ async function handleDrop(e) {
             status: newStatus,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
+        console.log("Item movido para:", newStatus);
     } catch (error) {
         console.error('Erro ao atualizar status:', error);
         alert('Erro ao mover item. Verifique o console.');
@@ -474,7 +489,10 @@ function filterItems() {
     
     filteredItems.forEach(item => {
         const card = createItemCard(item);
-        document.getElementById(`${item.status}-items`).appendChild(card);
+        const columnElement = document.getElementById(`${item.status}-items`);
+        if (columnElement) {
+            columnElement.appendChild(card);
+        }
     });
     
     updateColumnCounts();
