@@ -72,6 +72,8 @@ document.addEventListener('DOMContentLoaded', function() {
 function setupApplication() {
     // Configura todos os event listeners da aplicação principal
     const newItemBtn = document.getElementById('add-item');
+    const menuBtn = document.getElementById('menu-btn');
+    const closeMenuBtn = document.getElementById('close-menu');
     const closeModalBtn = document.querySelector('.modal-close');
     const cancelBtn = document.getElementById('cancel-btn');
     const itemForm = document.getElementById('item-form');
@@ -82,10 +84,14 @@ function setupApplication() {
     const searchBtn = document.getElementById('search-btn');
     const departmentFilter = document.getElementById('department-filter');
     const priorityFilter = document.getElementById('priority-filter');
+    const statusFilter = document.getElementById('status-filter');
     const resetFiltersBtn = document.getElementById('reset-filters');
+    const exportBtn = document.getElementById('export-btn');
 
     // Event Listeners
     newItemBtn.addEventListener('click', openNewItemModal);
+    menuBtn.addEventListener('click', toggleItemsMenu);
+    closeMenuBtn.addEventListener('click', toggleItemsMenu);
     closeModalBtn.addEventListener('click', closeModal);
     cancelBtn.addEventListener('click', closeModal);
     itemForm.addEventListener('submit', handleFormSubmit);
@@ -98,7 +104,9 @@ function setupApplication() {
     });
     departmentFilter.addEventListener('change', filterItems);
     priorityFilter.addEventListener('change', filterItems);
+    statusFilter.addEventListener('change', filterItems);
     resetFiltersBtn.addEventListener('click', resetFilters);
+    exportBtn.addEventListener('click', exportToExcel);
 
     // Configura drag and drop
     setupDragAndDrop();
@@ -146,6 +154,7 @@ function loadItems() {
             
             renderItems();
             updateStats();
+            updateItemsTable();
         }, error => {
             console.error('Erro ao carregar itens:', error);
             // Tenta carregar sem o filtro se houver erro de permissão
@@ -181,6 +190,7 @@ function loadAllItems() {
             
             renderItems();
             updateStats();
+            updateItemsTable();
         })
         .catch(error => {
             console.error('Erro ao carregar todos os itens:', error);
@@ -286,6 +296,23 @@ function openEditItemModal(item) {
     openModal();
 }
 
+function toggleItemsMenu() {
+    const itemsMenu = document.getElementById('items-menu');
+    const kanbanContainer = document.querySelector('.kanban-container');
+    const statsContainer = document.querySelector('.stats-container');
+    
+    if (itemsMenu.style.display === 'none') {
+        itemsMenu.style.display = 'block';
+        kanbanContainer.style.display = 'none';
+        statsContainer.style.display = 'none';
+        updateItemsTable();
+    } else {
+        itemsMenu.style.display = 'none';
+        kanbanContainer.style.display = 'flex';
+        statsContainer.style.display = 'flex';
+    }
+}
+
 function openModal() {
     document.getElementById('item-modal').style.display = 'block';
     document.body.style.overflow = 'hidden';
@@ -385,6 +412,62 @@ function renderItems() {
     });
     
     updateColumnCounts();
+}
+
+function updateItemsTable() {
+    const tableBody = document.getElementById('items-table-body');
+    tableBody.innerHTML = '';
+    
+    if (items.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="8" style="text-align: center; padding: 2rem;">
+                    <i class="fas fa-inbox" style="font-size: 3rem; opacity: 0.5; margin-bottom: 1rem;"></i>
+                    <p>Nenhum item cadastrado</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    items.forEach(item => {
+        const row = document.createElement('tr');
+        
+        const statusText = {
+            'requested': 'Requerido',
+            'ordered': 'Pedido',
+            'received': 'Recebido'
+        }[item.status] || item.status;
+        
+        row.innerHTML = `
+            <td>${item.name || 'Sem nome'}</td>
+            <td>${item.code || 'N/A'}</td>
+            <td>${item.department || 'Não especificado'}</td>
+            <td>${item.quantity || 0} ${item.unit || 'un'}</td>
+            <td><span class="status-badge status-${item.status}">${statusText}</span></td>
+            <td>${getPriorityText(item.priority)}</td>
+            <td>${formatDate(item.requestDate)}</td>
+            <td class="table-actions">
+                <button class="btn-secondary" onclick="openEditItemModal(${JSON.stringify(item).replace(/"/g, '&quot;')})">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn-danger" onclick="deleteItem('${item.id}', event)">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        `;
+        
+        tableBody.appendChild(row);
+    });
+}
+
+function getPriorityText(priority) {
+    const priorityMap = {
+        'high': 'Alta',
+        'medium': 'Média',
+        'low': 'Baixa'
+    };
+    return priorityMap[priority] || priority || 'Média';
 }
 
 function clearColumns() {
@@ -566,6 +649,7 @@ function filterItems() {
     const searchTerm = document.getElementById('search-input').value.toLowerCase();
     const department = document.getElementById('department-filter').value;
     const priority = document.getElementById('priority-filter').value;
+    const status = document.getElementById('status-filter').value;
     
     const filteredItems = items.filter(item => {
         const matchesSearch = item.name.toLowerCase().includes(searchTerm) || 
@@ -573,8 +657,9 @@ function filterItems() {
                              (item.supplier && item.supplier.toLowerCase().includes(searchTerm));
         const matchesDepartment = department === 'all' || item.department === department;
         const matchesPriority = priority === 'all' || item.priority === priority;
+        const matchesStatus = status === 'all' || item.status === status;
         
-        return matchesSearch && matchesDepartment && matchesPriority;
+        return matchesSearch && matchesDepartment && matchesPriority && matchesStatus;
     });
     
     clearColumns();
@@ -594,7 +679,41 @@ function resetFilters() {
     document.getElementById('search-input').value = '';
     document.getElementById('department-filter').value = 'all';
     document.getElementById('priority-filter').value = 'all';
+    document.getElementById('status-filter').value = 'all';
     renderItems();
+}
+
+// Função de exportação para Excel
+function exportToExcel() {
+    // Preparar dados para exportação
+    const dataForExport = items.map(item => ({
+        'Nome': item.name || '',
+        'Código': item.code || '',
+        'Categoria': item.category || '',
+        'Departamento': item.department || '',
+        'Quantidade': item.quantity || 0,
+        'Unidade': item.unit || '',
+        'Prioridade': getPriorityText(item.priority),
+        'Status': getStatusText(item.status).toUpperCase(),
+        'Data Solicitação': formatDate(item.requestDate),
+        'Data Prevista': formatDate(item.dueDate),
+        'Pagamento': {
+            'cash': 'À vista',
+            'installment': 'Parcelado',
+            'consigned': 'Consignado'
+        }[item.payment] || item.payment || '',
+        'Fornecedor': item.supplier || '',
+        'Observações': item.notes || ''
+    }));
+    
+    // Criar planilha
+    const worksheet = XLSX.utils.json_to_sheet(dataForExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Itens Almoxarifado');
+    
+    // Gerar arquivo e fazer download
+    const today = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(workbook, `almoxarifado_miratech_${today}.xlsx`);
 }
 
 // Funções Auxiliares
@@ -614,27 +733,3 @@ window.addEventListener('click', (e) => {
         closeModal();
     }
 });
-
-// Adiciona CSS para empty state
-const emptyStateCSS = `
-.empty-state {
-    text-align: center;
-    padding: 2rem;
-    color: var(--gray-dark);
-}
-
-.empty-state i {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-    opacity: 0.5;
-}
-
-.empty-state p {
-    font-size: 1.1rem;
-}
-`;
-
-// Injeta o CSS
-const style = document.createElement('style');
-style.textContent = emptyStateCSS;
-document.head.appendChild(style);
