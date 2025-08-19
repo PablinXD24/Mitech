@@ -440,6 +440,20 @@ body {
     align-self: flex-start;
 }
 
+.item-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--gray-light);
+}
+
+.delete-btn {
+    padding: 0.5rem;
+    font-size: 0.8rem;
+    border-radius: 4px;
+}
+
 .stats-container {
     display: flex;
     gap: 1.5rem;
@@ -735,24 +749,6 @@ body {
     .stat-card {
         min-width: 100%;
     }
-}
-
-/* ... (mantenha todo o CSS existente) ... */
-
-/* Adicione estas regras ao final do arquivo */
-
-.item-actions {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 0.75rem;
-    padding-top: 0.75rem;
-    border-top: 1px solid var(--gray-light);
-}
-
-.delete-btn {
-    padding: 0.5rem;
-    font-size: 0.8rem;
-    border-radius: 4px;
 }
 
 /* Melhorias para responsividade */
