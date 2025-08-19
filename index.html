@@ -6,6 +6,7 @@
     <title>Almoxarifado Miratech</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
@@ -51,6 +52,9 @@
                 <button id="add-item" class="btn-primary">
                     <i class="fas fa-plus"></i> Novo Item
                 </button>
+                <button id="menu-btn" class="btn-secondary">
+                    <i class="fas fa-bars"></i> Menu
+                </button>
                 <button id="logout-btn" class="btn-danger">
                     <i class="fas fa-sign-out-alt"></i> Sair
                 </button>
@@ -72,9 +76,49 @@
                     <option value="medium">Média</option>
                     <option value="low">Baixa</option>
                 </select>
+                <select id="status-filter">
+                    <option value="all">Todos Status</option>
+                    <option value="requested">Requeridos</option>
+                    <option value="ordered">Pedidos</option>
+                    <option value="received">Recebidos</option>
+                </select>
                 <button id="reset-filters" class="btn-secondary">
                     <i class="fas fa-redo"></i> Limpar Filtros
                 </button>
+                <button id="export-btn" class="btn-primary">
+                    <i class="fas fa-file-export"></i> Exportar
+                </button>
+            </div>
+        </div>
+
+        <!-- Menu de Itens (inicialmente oculto) -->
+        <div class="items-menu" id="items-menu" style="display: none;">
+            <div class="menu-header">
+                <h2><i class="fas fa-list"></i> Relatório de Itens</h2>
+                <button id="close-menu" class="btn-secondary">
+                    <i class="fas fa-times"></i> Fechar
+                </button>
+            </div>
+            <div class="menu-content">
+                <div class="table-container">
+                    <table id="items-table">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Código</th>
+                                <th>Departamento</th>
+                                <th>Quantidade</th>
+                                <th>Status</th>
+                                <th>Prioridade</th>
+                                <th>Data Solicitação</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="items-table-body">
+                            <!-- Itens serão preenchidos via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
