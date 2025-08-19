@@ -48,10 +48,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Evento de login
     loginForm.addEventListener('submit', function(e) {
         e.preventDefault();
-        const email = document.getElementById('login-email').value + '@miratech.com';
+        const email = document.getElementById('login-email').value;
         const password = document.getElementById('login-password').value;
         
-        auth.signInWithEmailAndPassword(email, password)
+        // Verifica se o email já contém o domínio
+        const finalEmail = email.includes('@') ? email : email + '@miratech.com';
+        
+        auth.signInWithEmailAndPassword(finalEmail, password)
             .catch((error) => {
                 alert('Erro no login: ' + error.message);
             });
@@ -112,7 +115,7 @@ function createDefaultUser() {
     auth.createUserWithEmailAndPassword(email, password)
         .catch((error) => {
             if (error.code !== 'auth/email-already-in-use') {
-                console.error('Erro ao criar usuário padrão:', error);
+                console.log('Usuário padrão já existe ou outro erro:', error.message);
             }
         });
 }
@@ -120,9 +123,10 @@ function createDefaultUser() {
 // Funções de CRUD
 function loadItems() {
     console.log("Carregando itens para o usuário:", currentUser.uid);
+    
+    // Consulta simplificada sem ordenação complexa para evitar necessidade de índice
     db.collection('items')
         .where('userId', '==', currentUser.uid)
-        .orderBy('createdAt', 'desc')
         .onSnapshot(snapshot => {
             items = [];
             snapshot.forEach(doc => {
@@ -131,10 +135,55 @@ function loadItems() {
                 items.push(item);
                 console.log("Item carregado:", item.name, "Status:", item.status);
             });
+            
+            // Ordena localmente por data de criação (mais recente primeiro)
+            items.sort((a, b) => {
+                if (a.createdAt && b.createdAt) {
+                    return b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime();
+                }
+                return 0;
+            });
+            
             renderItems();
             updateStats();
         }, error => {
             console.error('Erro ao carregar itens:', error);
+            // Tenta carregar sem o filtro se houver erro de permissão
+            if (error.code === 'permission-denied') {
+                loadAllItems();
+            }
+        });
+}
+
+// Fallback se o usuário não tiver permissão para consultar com filtro
+function loadAllItems() {
+    db.collection('items')
+        .get()
+        .then(snapshot => {
+            items = [];
+            snapshot.forEach(doc => {
+                const item = doc.data();
+                item.id = doc.id;
+                // Filtra localmente por usuário
+                if (item.userId === currentUser.uid) {
+                    items.push(item);
+                    console.log("Item carregado (fallback):", item.name, "Status:", item.status);
+                }
+            });
+            
+            // Ordena localmente por data de criação
+            items.sort((a, b) => {
+                if (a.createdAt && b.createdAt) {
+                    return b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime();
+                }
+                return 0;
+            });
+            
+            renderItems();
+            updateStats();
+        })
+        .catch(error => {
+            console.error('Erro ao carregar todos os itens:', error);
         });
 }
 
@@ -164,19 +213,19 @@ async function handleFormSubmit(e) {
         // Objeto com os dados do item
         const itemData = {
             name: itemName,
-            code: document.getElementById('item-code').value || null,
-            category: document.getElementById('item-category').value || null,
+            code: document.getElementById('item-code').value || '',
+            category: document.getElementById('item-category').value || '',
             department: itemDepartment,
             quantity: parseInt(itemQuantity),
             unit: document.getElementById('item-unit').value,
             priority: document.getElementById('item-priority').value,
             requestDate: document.getElementById('item-request-date').value,
-            dueDate: document.getElementById('item-due-date').value || null,
+            dueDate: document.getElementById('item-due-date').value || '',
             payment: document.getElementById('item-payment').value,
-            supplier: document.getElementById('item-supplier').value || null,
-            notes: document.getElementById('item-notes').value || null,
-            image: imageUrl || null,
-            status: isEditing ? items.find(item => item.id === currentItemId).status : 'requested',
+            supplier: document.getElementById('item-supplier').value || '',
+            notes: document.getElementById('item-notes').value || '',
+            image: imageUrl || '',
+            status: isEditing ? items.find(item => item.id === currentItemId)?.status || 'requested' : 'requested',
             userId: currentUser.uid,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
@@ -203,7 +252,9 @@ async function handleFormSubmit(e) {
     }
 }
 
-function deleteItem(itemId) {
+function deleteItem(itemId, event) {
+    if (event) event.stopPropagation();
+    
     if (confirm('Tem certeza que deseja excluir este item?')) {
         db.collection('items').doc(itemId).delete()
             .then(() => {
@@ -254,16 +305,16 @@ function resetForm() {
 }
 
 function populateForm(item) {
-    document.getElementById('item-name').value = item.name;
+    document.getElementById('item-name').value = item.name || '';
     document.getElementById('item-code').value = item.code || '';
     document.getElementById('item-category').value = item.category || '';
-    document.getElementById('item-department').value = item.department;
-    document.getElementById('item-quantity').value = item.quantity;
-    document.getElementById('item-unit').value = item.unit;
-    document.getElementById('item-priority').value = item.priority;
-    document.getElementById('item-request-date').value = item.requestDate;
+    document.getElementById('item-department').value = item.department || '';
+    document.getElementById('item-quantity').value = item.quantity || '';
+    document.getElementById('item-unit').value = item.unit || 'un';
+    document.getElementById('item-priority').value = item.priority || 'medium';
+    document.getElementById('item-request-date').value = item.requestDate || '';
     document.getElementById('item-due-date').value = item.dueDate || '';
-    document.getElementById('item-payment').value = item.payment;
+    document.getElementById('item-payment').value = item.payment || 'cash';
     document.getElementById('item-supplier').value = item.supplier || '';
     document.getElementById('item-notes').value = item.notes || '';
     
@@ -279,6 +330,12 @@ function populateForm(item) {
 function handleImageUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
+    
+    // Verifica se o arquivo é uma imagem
+    if (!file.type.startsWith('image/')) {
+        alert('Por favor, selecione apenas arquivos de imagem.');
+        return;
+    }
     
     currentImageFile = file;
     
@@ -309,6 +366,11 @@ function renderItems() {
     console.log("Renderizando", items.length, "itens");
     clearColumns();
     
+    if (items.length === 0) {
+        showEmptyState();
+        return;
+    }
+    
     items.forEach(item => {
         const card = createItemCard(item);
         const columnElement = document.getElementById(`${item.status}-items`);
@@ -317,6 +379,8 @@ function renderItems() {
             console.log("Item adicionado à coluna:", item.status, "-", item.name);
         } else {
             console.error("Coluna não encontrada:", `${item.status}-items`);
+            // Fallback: adiciona à coluna requested se a coluna não for encontrada
+            document.getElementById('requested-items').appendChild(card);
         }
     });
     
@@ -324,14 +388,42 @@ function renderItems() {
 }
 
 function clearColumns() {
-    document.getElementById('requested-items').innerHTML = '';
-    document.getElementById('ordered-items').innerHTML = '';
-    document.getElementById('received-items').innerHTML = '';
+    const columns = ['requested', 'ordered', 'received'];
+    columns.forEach(status => {
+        const column = document.getElementById(`${status}-items`);
+        if (column) {
+            column.innerHTML = '';
+        }
+    });
+}
+
+function showEmptyState() {
+    const columns = ['requested', 'ordered', 'received'];
+    columns.forEach(status => {
+        const column = document.getElementById(`${status}-items`);
+        if (column) {
+            column.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-inbox"></i>
+                    <p>Nenhum item ${getStatusText(status)}</p>
+                </div>
+            `;
+        }
+    });
+}
+
+function getStatusText(status) {
+    const statusMap = {
+        'requested': 'requerido',
+        'ordered': 'pedido', 
+        'received': 'recebido'
+    };
+    return statusMap[status] || status;
 }
 
 function createItemCard(item) {
     const card = document.createElement('div');
-    card.className = `item-card priority-${item.priority}`;
+    card.className = `item-card priority-${item.priority || 'medium'}`;
     card.dataset.id = item.id;
     card.draggable = true;
     
@@ -339,23 +431,23 @@ function createItemCard(item) {
         'high': 'Alta',
         'medium': 'Média',
         'low': 'Baixa'
-    }[item.priority];
+    }[item.priority] || 'Média';
     
     const paymentText = {
         'cash': 'À vista',
         'installment': 'Parcelado',
         'consigned': 'Consignado'
-    }[item.payment] || item.payment;
+    }[item.payment] || item.payment || 'À vista';
     
     card.innerHTML = `
         <div class="item-header">
-            <h3 class="item-title">${item.name}</h3>
-            <span class="item-priority priority-${item.priority}">${priorityText}</span>
+            <h3 class="item-title">${item.name || 'Sem nome'}</h3>
+            <span class="item-priority priority-${item.priority || 'medium'}">${priorityText}</span>
         </div>
         
         <div class="item-image">
             ${item.image ? 
-                `<img src="${item.image}" alt="${item.name}">` : 
+                `<img src="${item.image}" alt="${item.name || 'Item'}">` : 
                 `<i class="fas fa-box-open"></i>`
             }
         </div>
@@ -363,7 +455,7 @@ function createItemCard(item) {
         <div class="item-details">
             <div class="item-detail-row">
                 <span class="item-detail-label">Quantidade:</span>
-                <span>${item.quantity} ${item.unit}</span>
+                <span>${item.quantity || 0} ${item.unit || 'un'}</span>
             </div>
             <div class="item-detail-row">
                 <span class="item-detail-label">Solicitado em:</span>
@@ -381,10 +473,10 @@ function createItemCard(item) {
             </div>
         </div>
         
-        <div class="item-department">${item.department}</div>
+        <div class="item-department">${item.department || 'Não especificado'}</div>
         
         <div class="item-actions">
-            <button class="btn-danger delete-btn" onclick="event.stopPropagation(); deleteItem('${item.id}')">
+            <button class="btn-danger delete-btn" onclick="deleteItem('${item.id}', event)">
                 <i class="fas fa-trash"></i>
             </button>
         </div>
@@ -502,19 +594,47 @@ function resetFilters() {
     document.getElementById('search-input').value = '';
     document.getElementById('department-filter').value = 'all';
     document.getElementById('priority-filter').value = 'all';
-    filterItems();
+    renderItems();
 }
 
 // Funções Auxiliares
 function formatDate(dateString) {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('pt-BR');
+    if (!dateString) return 'Não informada';
+    try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('pt-BR');
+    } catch (error) {
+        return 'Data inválida';
+    }
 }
 
 // Fecha modal ao clicar fora
 window.addEventListener('click', (e) => {
-    if (e.target === document.getElementById('item-modal') || e.target.classList.contains('modal-overlay')) {
+    if (e.target === document.getElementById('item-modal')) {
         closeModal();
     }
 });
+
+// Adiciona CSS para empty state
+const emptyStateCSS = `
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: var(--gray-dark);
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.empty-state p {
+    font-size: 1.1rem;
+}
+`;
+
+// Injeta o CSS
+const style = document.createElement('style');
+style.textContent = emptyStateCSS;
+document.head.appendChild(style);
