@@ -232,6 +232,7 @@ body {
     gap: 1rem;
     max-width: 1400px;
     margin: 0 auto;
+    flex-wrap: wrap;
 }
 
 .filter-group label {
@@ -251,6 +252,102 @@ body {
     outline: none;
     border-color: var(--accent-light);
     box-shadow: 0 0 0 3px rgba(242, 87, 73, 0.2);
+}
+
+/* Menu de Itens */
+.items-menu {
+    background-color: var(--white);
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    margin: 1.5rem;
+    padding: 1.5rem;
+    max-width: 1400px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.menu-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--gray-light);
+}
+
+.menu-header h2 {
+    font-size: 1.5rem;
+    color: var(--primary-dark);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.table-container {
+    overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid var(--gray-light);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--gray-light);
+}
+
+th {
+    background-color: var(--primary-medium);
+    color: var(--white);
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+}
+
+tr:nth-child(even) {
+    background-color: var(--background);
+}
+
+tr:hover {
+    background-color: var(--gray-light);
+}
+
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.status-requested {
+    background-color: rgba(255, 193, 7, 0.2);
+    color: #d39e00;
+}
+
+.status-ordered {
+    background-color: rgba(23, 162, 184, 0.2);
+    color: var(--info);
+}
+
+.status-received {
+    background-color: rgba(40, 167, 69, 0.2);
+    color: var(--success);
+}
+
+.table-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.table-actions button {
+    padding: 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
 }
 
 .kanban-container {
@@ -710,6 +807,11 @@ body {
     .kanban-column {
         width: 100%;
     }
+    
+    .filter-group {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 }
 
 @media (max-width: 768px) {
@@ -730,14 +832,24 @@ body {
     .stat-card {
         min-width: calc(50% - 0.75rem);
     }
-}
-
-@media (max-width: 480px) {
-    .filter-group {
+    
+    .items-menu {
+        margin: 1rem;
+        padding: 1rem;
+    }
+    
+    .menu-header {
         flex-direction: column;
+        gap: 1rem;
         align-items: flex-start;
     }
     
+    th, td {
+        padding: 0.5rem;
+    }
+}
+
+@media (max-width: 480px) {
     .form-actions {
         flex-direction: column;
     }
@@ -748,6 +860,10 @@ body {
     
     .stat-card {
         min-width: 100%;
+    }
+    
+    .table-actions {
+        flex-direction: column;
     }
 }
 
@@ -785,4 +901,20 @@ body {
     .modal-body {
         padding: 1rem;
     }
+}
+
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: var(--gray-dark);
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.empty-state p {
+    font-size: 1.1rem;
 }
